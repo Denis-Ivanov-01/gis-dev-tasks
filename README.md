@@ -61,7 +61,7 @@ You may implement one or more of the following:
 - include unit tests
 - add support for reading input data in various formats (`GML`, `SHP`, `KML`, etc.)
 
-### Task 2: 
+## Task 2: 
 
 You are asked to write a python script, SQL or build a small .NET application (console, desktop, or service) targeting .NET Runtime 8.0 or higher (Visual Studio 2022 v17.8 or higher), that processes data from multiple tables stored in an Esri Mobile Geodatabase.
 
