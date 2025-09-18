@@ -1,0 +1,11 @@
+{
+  "database_path": "C:\\Users\\denis\\source\\repos\\pontech_interview\\gis-dev-tasks\\data\\Task2.geodatabase",
+  "check_rooms_relationships": false,
+  "check_stations_relationships": false,
+  "log_file": "log.txt",
+  "log_level": "INFO",
+  "room_layer_name": "main.Room",
+  "room_detail_layer_name": "main.RoomDetail",
+  "station_layer_name": "main.Station",
+  "station_detail_layer_name": "main.StationDetail"
+}
