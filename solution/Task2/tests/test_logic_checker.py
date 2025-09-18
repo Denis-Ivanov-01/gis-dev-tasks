@@ -5,6 +5,7 @@ from config import Config
 from geo_access.geo_accessor import GeoDataAccessor
 import logging
 
+
 ##################################
 # GENERATED WITH THE HELP OF AI! #
 ##################################
@@ -35,42 +36,63 @@ class TestLogicChecker(unittest.TestCase):
     def tearDown(self):
         self.log_capture.clear()
 
-    @patch('arcpy.management.GetCount')
-    def test_get_layer_count(self, mock_get_count):
-        # Mock the GetCount result
-        mock_result = Mock()
-        mock_result.__getitem__ = lambda self, index: 42 if index == 0 else None
-        mock_get_count.return_value = mock_result
+    def test_get_layer_count(self):
+        """Test get_layer_count method"""
+        # Mock the get_count method
+        self.mock_accessor.get_count.return_value = 42
 
         count = self.logic_checker.get_layer_count("test_layer")
 
         self.assertEqual(count, 42)
-        mock_get_count.assert_called_once_with("test_layer")
+        self.mock_accessor.get_count.assert_called_once_with("test_layer")
         self.assertIn("Layer 'test_layer' contains 42 features", self.log_capture)
 
-    @patch('arcpy.management.SelectLayerByAttribute')
-    @patch.object(LogicChecker, 'get_layer_count')
-    def test_get_guid_success(self, mock_get_count, mock_select):
-        # Mock layer count to return 1
-        mock_get_count.return_value = 1
+    def test_get_guid_success(self):
+        """Test get_guid method with successful single feature found"""
+        # Mock select_layer_by_attribute to return a layer name
+        self.mock_accessor.select_layer_by_attribute.return_value = "filtered_layer"
 
-        # Mock search cursor to return a GUID
+        # Mock get_count to return 1 (exactly one feature)
+        self.mock_accessor.get_count.return_value = 1
+
+        # Mock search_cursor to return a GUID
         self.mock_accessor.search_cursor.return_value = [("test-guid-123",)]
 
         guid = self.logic_checker.get_guid("test_layer", "OBJECTID = 1")
 
         self.assertEqual(guid, "test-guid-123")
-        mock_select.assert_called_once_with("test_layer", where_clause="OBJECTID = 1")
-        mock_get_count.assert_called_once()
+        self.mock_accessor.select_layer_by_attribute.assert_called_once_with(
+            "test_layer", "OBJECTID = 1"
+        )
+        self.mock_accessor.get_count.assert_called_once_with("filtered_layer")
         self.mock_accessor.search_cursor.assert_called_once_with(
             "test_layer", "GLOBALID", where="OBJECTID = 1"
         )
 
-    @patch('arcpy.management.SelectLayerByAttribute')
-    @patch.object(LogicChecker, 'get_layer_count')
-    def test_get_guid_multiple_features_error(self, mock_get_count, mock_select):
-        # Mock layer count to return more than 1 feature
-        mock_get_count.return_value = 2
+    def test_get_guid_multiple_features_error(self):
+        """Test get_guid method throws error when multiple features found"""
+        # Mock select_layer_by_attribute
+        self.mock_accessor.select_layer_by_attribute.return_value = "filtered_layer"
+
+        # Mock get_count to return 2 (more than one feature)
+        self.mock_accessor.get_count.return_value = 2
+
+        with self.assertRaises(RuntimeError) as context:
+            self.logic_checker.get_guid("test_layer", "OBJECTID = 1")
+
+        self.assertIn("Expected exactly 1 feature", str(context.exception))
+        self.mock_accessor.select_layer_by_attribute.assert_called_once_with(
+            "test_layer", "OBJECTID = 1"
+        )
+        self.mock_accessor.get_count.assert_called_once_with("filtered_layer")
+
+    def test_get_guid_no_features_error(self):
+        """Test get_guid method throws error when no features found"""
+        # Mock select_layer_by_attribute
+        self.mock_accessor.select_layer_by_attribute.return_value = "filtered_layer"
+
+        # Mock get_count to return 0 (no features)
+        self.mock_accessor.get_count.return_value = 0
 
         with self.assertRaises(RuntimeError) as context:
             self.logic_checker.get_guid("test_layer", "OBJECTID = 1")
@@ -78,10 +100,11 @@ class TestLogicChecker(unittest.TestCase):
         self.assertIn("Expected exactly 1 feature", str(context.exception))
 
     def test_check_point_to_poly_relationship_valid(self):
+        """Test valid point-to-polygon relationship"""
         # Mock intersect to create temporary feature class
         self.mock_accessor.intersect.return_value = "in_memory\\intersected"
 
-        # Mock search cursor to return valid data (GUIDs match)
+        # Mock search_cursor to return valid data (GUIDs match)
         self.mock_accessor.search_cursor.return_value = [
             (1, 1, "point-guid-123")  # FID_Point, FID_Poly, logical_GUID
         ]
@@ -105,10 +128,11 @@ class TestLogicChecker(unittest.TestCase):
         self.mock_accessor.delete.assert_called_once_with("in_memory\\intersected")
 
     def test_check_point_to_poly_relationship_invalid(self):
+        """Test invalid point-to-polygon relationship"""
         # Mock intersect
         self.mock_accessor.intersect.return_value = "in_memory\\intersected"
 
-        # Mock search cursor to return data with mismatched GUIDs
+        # Mock search_cursor to return data with mismatched GUIDs
         self.mock_accessor.search_cursor.return_value = [
             (1, 1, "logical-guid-123")  # logical GUID doesn't match geometrical
         ]
@@ -127,8 +151,10 @@ class TestLogicChecker(unittest.TestCase):
         # Should return one invalid entry
         expected_entry = ("poly-guid-789", "logical-guid-123", "geometrical-guid-456")
         self.assertEqual(result, [expected_entry])
+        self.mock_accessor.delete.assert_called_once_with("in_memory\\intersected")
 
     def test_check_room_to_roomdetail_relationships(self):
+        """Test room-to-roomdetail relationships wrapper"""
         with patch.object(self.logic_checker, '_check_point_to_poly_relationship') as mock_check:
             mock_check.return_value = [("room-guid", "logical", "geometrical")]
 
@@ -142,6 +168,7 @@ class TestLogicChecker(unittest.TestCase):
             self.assertEqual(result, [("room-guid", "logical", "geometrical")])
 
     def test_check_station_to_stationdetail_relationships(self):
+        """Test station-to-stationdetail relationships wrapper"""
         with patch.object(self.logic_checker, '_check_point_to_poly_relationship') as mock_check:
             mock_check.return_value = [("station-guid", "logical", "geometrical")]
 
@@ -155,10 +182,11 @@ class TestLogicChecker(unittest.TestCase):
             self.assertEqual(result, [("station-guid", "logical", "geometrical")])
 
     def test_check_room_to_station_relationships_valid(self):
+        """Test valid room-to-station relationships"""
         # Mock intersect
         self.mock_accessor.intersect.return_value = "in_memory\\intersected"
 
-        # Mock search cursor with matching GUIDs
+        # Mock search_cursor with matching GUIDs
         self.mock_accessor.search_cursor.return_value = [
             ("station-guid-123", "station-guid-123", 1)  # Matching GUIDs
         ]
@@ -175,12 +203,14 @@ class TestLogicChecker(unittest.TestCase):
             [self.config.room_layer_name, self.config.station_detail_layer_name],
             "in_memory\\intersected"
         )
+        self.mock_accessor.delete.assert_called_once_with("in_memory\\intersected")
 
     def test_check_room_to_station_relationships_invalid(self):
+        """Test invalid room-to-station relationships"""
         # Mock intersect
         self.mock_accessor.intersect.return_value = "in_memory\\intersected"
 
-        # Mock search cursor with mismatched GUIDs
+        # Mock search_cursor with mismatched GUIDs
         self.mock_accessor.search_cursor.return_value = [
             ("logical-station-guid", "geometrical-station-guid", 1)
         ]
@@ -194,12 +224,14 @@ class TestLogicChecker(unittest.TestCase):
         # Should return one invalid entry
         expected_entry = ("room-guid-456", "logical-station-guid", "geometrical-station-guid")
         self.assertEqual(result, [expected_entry])
+        self.mock_accessor.delete.assert_called_once_with("in_memory\\intersected")
 
     def test_check_room_to_station_relationships_multiple_rows(self):
+        """Test room-to-station relationships with multiple rows"""
         # Mock intersect
         self.mock_accessor.intersect.return_value = "in_memory\\intersected"
 
-        # Mock search cursor with multiple rows, some valid, some invalid
+        # Mock search_cursor with multiple rows, some valid, some invalid
         self.mock_accessor.search_cursor.return_value = [
             ("match-1", "match-1", 1),  # Valid
             ("logical-2", "geometrical-2", 2),  # Invalid
@@ -220,6 +252,7 @@ class TestLogicChecker(unittest.TestCase):
         ]
         self.assertEqual(result, expected_entries)
         self.assertEqual(len(result), 2)
+        self.mock_accessor.delete.assert_called_once_with("in_memory\\intersected")
 
 
 if __name__ == '__main__':
