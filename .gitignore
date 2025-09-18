@@ -4,6 +4,7 @@
 [Ll]og/
 [Ll]ogs/
 .idea/
+__pycache__/
 
 # Visual Studio cache/options
 .vs/

@@ -1,13 +1,15 @@
 from logic_checker import LogicChecker
 from config import Config
+from geo_access.arcpy_accessor import ArcpyAccessor
 from utils.log_format import configure_logging
 from utils.csv_generator import CsvGenerator
 import logging
+import os
 
 
 def perform_logical_checks(config):
-    checker = LogicChecker(config)
-    csv = CsvGenerator()
+    checker = LogicChecker(config, ArcpyAccessor())
+    csv = CsvGenerator(os.path.dirname(__file__))
 
     if config.check_rooms_relationships:
         logging.info("Checking room to room detail relations...")

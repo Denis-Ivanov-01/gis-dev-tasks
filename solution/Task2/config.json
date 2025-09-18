@@ -3,7 +3,7 @@
   "check_rooms_relationships": false,
   "check_stations_relationships": false,
   "log_file": "log.txt",
-  "log_level": "INFO",
+  "log_level": "DEBUG",
   "room_layer_name": "main.Room",
   "room_detail_layer_name": "main.RoomDetail",
   "station_layer_name": "main.Station",

@@ -1,5 +1,5 @@
 import arcpy
-from geo_accessor import GeoDataAccessor
+from geo_access.geo_accessor import GeoDataAccessor
 
 
 class ArcpyAccessor(GeoDataAccessor):
@@ -20,3 +20,13 @@ class ArcpyAccessor(GeoDataAccessor):
 
     def delete(self, fc):
         arcpy.management.Delete(fc)
+
+    def set_workspace(self, workspace_path: str) -> None:
+        arcpy.env.workspace = workspace_path
+
+    def get_count(self, layer: str) -> int:
+        result = arcpy.management.GetCount(layer)
+        return int(result[0])
+
+    def select_layer_by_attribute(self, layer: str, where_clause: str) -> str:
+        return arcpy.management.SelectLayerByAttribute(layer, where_clause=where_clause)

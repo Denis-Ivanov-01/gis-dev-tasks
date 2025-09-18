@@ -4,11 +4,7 @@ import csv
 
 class CsvGenerator:
 
-    def __init__(self, directory: str = None):
-
-        if not directory:
-            directory = os.path.dirname(__file__)
-
+    def __init__(self, directory: str):
         self.directory = os.path.abspath(directory)
         os.makedirs(self.directory, exist_ok=True)
 
